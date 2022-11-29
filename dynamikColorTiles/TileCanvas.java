@@ -12,7 +12,7 @@ public class TileCanvas
 
     private final Canvas canvas;
 
-    private final int tileWidth, tileHeight, tileNrHorizontal, tileNrVertical;
+    private final int tileWidth, tileHeight;//, tileNrHorizontal, tileNrVertical;
 
 
     public TileCanvas(int tileWidth, int tileHeight, int tileNrHorizontal, int tileNrVertical)
@@ -20,8 +20,8 @@ public class TileCanvas
 
         this.tileWidth = tileWidth;
         this.tileHeight = tileHeight;
-        this.tileNrHorizontal = tileNrHorizontal;
-        this.tileNrVertical = tileNrVertical;
+        //this.tileNrHorizontal = tileNrHorizontal;
+        //this.tileNrVertical = tileNrVertical;
 
         tileNr = tileNrVertical*tileNrHorizontal;
         canvas = new Canvas(tileWidth*tileNrHorizontal, tileHeight*tileNrVertical);

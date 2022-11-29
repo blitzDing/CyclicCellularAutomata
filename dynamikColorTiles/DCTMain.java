@@ -96,15 +96,45 @@ public class DCTMain extends Application
             Platform.runLater(r);
         }
 
-        //Start new move
-        Runnable r2 = new NewAni(stage);
-        Platform.runLater(r2);
-        aniInstCount++;
+        colorCount = Integer.parseInt(ccTxtField.getText());
+        rangeBegin = Integer.parseInt(rBTxtField.getText());
+        rangeEnd = Integer.parseInt(rETxtField.getText());
+        ratio = Float.parseFloat(ratioTxtField.getText());
+        
+        String inputState = DCTMain.inputIsOK(colorCount, rangeBegin, rangeEnd, ratio);
+        if(inputState.equals(noError))
+        {
+        	Runnable r2 = new NewAni(stage);
+        	Platform.runLater(r2);
+        	aniInstCount++;
+        }
+        else new InputError(inputState);
     }
 
     private void setTitle(Stage stage, String title)
     {
         stage.setTitle(title);
+    }
+    
+    private static final String colorCountError = "colorCount too big or too small.";
+    private static final String rangeBeginError = "Range-begin amount too big.";
+    private static final String rangeEndError = "Range-end amount too big.";
+    private static final String rangeBeginEqualToRangeEndError = "range-Begin can not be equal to range-End";    
+    private static final String rangeSpanTooBigError = "The span of Range is too Big";
+    private static final String ratioOutOfBounds = "Ratio must be bigger then Zero and equal or smaller the One.";
+    private static final String noError = "OK";
+    
+    private static String inputIsOK(int colorCount, int rangeBegin, int rangeEnd, float ratio)
+    {
+    	if(colorCount>256||colorCount<2)return colorCountError;
+    	if(Math.abs(rangeBegin)>6)return rangeBeginError;
+    	if(Math.abs(rangeEnd)>6)return rangeEndError;
+    	if(rangeBegin==rangeEnd)return rangeBeginEqualToRangeEndError;
+    	if(-rangeBegin+rangeEnd>10)return rangeSpanTooBigError;
+    	
+    	if(ratio<=0||ratio>1)return ratioOutOfBounds;
+    	
+    	return noError;
     }
 
     private class NewAni implements Runnable
@@ -125,23 +155,30 @@ public class DCTMain extends Application
             rangeBegin = Integer.parseInt(rBTxtField.getText());
             rangeEnd = Integer.parseInt(rETxtField.getText());
             ratio = Float.parseFloat(ratioTxtField.getText());
-            setTitle(stage,"Colors: "+colorCount
-                    +" Ratio: "
-                    +ratio
-                    +" Range: ("
-                    +rangeBegin
-                    +", "
-                    +rangeEnd+")");
+            
+            
+           	setTitle(stage,"Colors: "+colorCount
+                   	+" Ratio: "
+                   	+ratio
+                   	+" Range: ("
+                   	+rangeBegin
+                   	+", "
+                  	+rangeEnd+")");
 
             String name = String.valueOf(aniInstCount);
-            move = new
-                    AnimationThrd(name, tileNrHorizontal, tileNrVertical, colorCount, rangeBegin, rangeEnd, ratio);
+           	move = new 
+           			AnimationThrd(name, tileNrHorizontal, tileNrVertical, colorCount, rangeBegin, rangeEnd, ratio);
 
             root.getChildren().add(move.getCanvas());
             move.start();
         }
     }
 
+    public void stop()
+    {
+    	Platform.exit();
+    }
+    
     private class AlterGUI implements Runnable
     {
 

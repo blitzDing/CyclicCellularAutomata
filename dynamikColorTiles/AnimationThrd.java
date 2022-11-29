@@ -216,6 +216,4 @@ public class AnimationThrd extends Thread
         Toolkit.getDefaultToolkit().beep();
         System.out.println("Fin");
     }
-
-
 }
