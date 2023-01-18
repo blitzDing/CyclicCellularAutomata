@@ -6,13 +6,13 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
-public class InputError extends Stage 
+public class InputErrorMsgStage extends Stage 
 {
 
 	private int width = 450;
 	private int height = 75;
 	
-	public InputError(String inputState)
+	public InputErrorMsgStage(String inputState)
 	{
 		super();
 		
