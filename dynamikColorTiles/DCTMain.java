@@ -4,15 +4,19 @@ package dynamikColorTiles;
 import javafx.application.*;
 
 import javafx.event.*;
-
-import javafx.scene.*;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
+
 import javafx.scene.layout.*;
 
+import javafx.scene.paint.Color;
+
+
 import javafx.stage.Stage;
+
 
 
 public class DCTMain extends Application
@@ -20,6 +24,14 @@ public class DCTMain extends Application
 
     private int tileNrHorizontal = 200;
     private int tileNrVertical = 150;
+
+    private final int rangeMax = 5;
+    //private final int rangeMin = -rangeMax;
+    private final int rangeSpan = 2*rangeMax+1;
+    
+    private final int colorCountMax = 256;
+    private final int colorCountMin = 2;
+    
     private int colorCount = 14;
     private int rangeBegin = -1;
     private int rangeEnd = 1;
@@ -33,7 +45,6 @@ public class DCTMain extends Application
     Slider sliderV = new Slider(-5, 5, -1);   
     Slider sliderH = new Slider(-5, 5, 1);
     
-    
     Label colorCountLbl = new Label("Nr. of Colors");
     TextField ccTxtField = new TextField(String.valueOf(colorCount));
 
@@ -42,15 +53,21 @@ public class DCTMain extends Application
     Label ratioLbl = new Label("Ratio");
     TextField ratioTxtField = new TextField(String.valueOf(probability));
 
+    int ntcTileWidth = 20;
+    int ntcTileHeight = ntcTileWidth;
+    TileCanvas neighbourTC = new TileCanvas(ntcTileWidth, ntcTileHeight, rangeSpan, rangeSpan);
+    Color alphaColorNTC = Color.YELLOW;
+    Color betaColorNTC = Color.BLUE;
+    
+    boolean [][] ntcState = new boolean[rangeSpan][rangeSpan];
+    
     HBox ratioHBox = new HBox();
-
     VBox adjustmentVBox = new VBox();
-
     HBox rangeHBox = new HBox();
 
     private static int aniInstCount = 0;
 
-    private NewAnimation na;
+    private CanvasSupplier cs;
     
     private boolean halt = false;
     
@@ -58,18 +75,19 @@ public class DCTMain extends Application
 	{
 	
 	
-		na.setConfigData(colorCount, tileNrHorizontal, tileNrVertical, rangeBegin, rangeEnd, 
+		cs.setConfigData(colorCount, tileNrHorizontal, tileNrVertical, rangeBegin, rangeEnd, 
 	        		probability);
-		na.setRange();	
-		na.setColorGraph();
-		na.initTileData();
+		cs.setRange();	
+		cs.setColorGraph();
+		cs.initTileData();
+		cs.resetCycleNr();
 		
 		while(!halt)
 		{
 				
-			Platform.runLater(() ->	na.drawArray());
+			Platform.runLater(() ->	cs.drawArray());
 			
-			na.computeTileData();
+			cs.computeTileData();
 		}
 	};
 		
@@ -107,7 +125,7 @@ public class DCTMain extends Application
     	sliderH.setSnapToTicks(true);
     	sliderH.valueProperty().addListener((obs, oldval, newVal) -> 
         sliderH.setValue(newVal.intValue()));
-    	
+        	
         Scene scene = new Scene(root,1100,600);
         primaryStage = new Stage();
         Button startBtn = new Button("Start");
@@ -115,8 +133,8 @@ public class DCTMain extends Application
         
         EventHandler<ActionEvent> eventH0 = (event)->
         {
-
-            System.out.println("Start event!");
+        	
+        	System.out.println("Start event!");
             startBtn.setText("Session: " + aniInstCount);
             
             //No need to ask for aliveness.
@@ -146,15 +164,46 @@ public class DCTMain extends Application
 
         ratioHBox.getChildren().addAll(ratioLbl, ratioTxtField);
 
-        adjustmentVBox.getChildren().addAll(rangeHBox, ccBox, ratioHBox, startBtn);
-        										//Dummy
-       	na = new NewAnimation(finalPrimaryStage, root, tileNrHorizontal, tileNrVertical);
+        
+        adjustmentVBox.getChildren().addAll(rangeHBox, ccBox, ratioHBox, startBtn, neighbourTC.getCanvas());
+        setupGrid();
+        
+       	cs = new CanvasSupplier(finalPrimaryStage, root, tileNrHorizontal, tileNrVertical);
 
-       	root.getChildren().addAll(adjustmentVBox, na.getCanvas());
+       	root.getChildren().addAll(adjustmentVBox, cs.getCanvas());
 
-       	
        	primaryStage.setScene(scene);
         primaryStage.show();
+    }
+    
+    private void setupGrid()
+    {
+    	//TODO: Include ntcState.
+        neighbourTC.getCanvas().setOnMouseClicked(event -> 
+        {
+        	
+
+            int x = ((int)(event.getX()))/(ntcTileWidth);
+            int y = ((int)(event.getY()))/(ntcTileHeight);
+            //TODO: check current Color. Canvas currentCol = neighbourTC.getCanvas();
+            System.out.println("(x, y) = ("+x +", "+y+")");
+            neighbourTC.setColorOnTile(x, y, Color.RED);
+        });    	
+
+    	// Fills Canvas complete and over paints everything.	
+		for(int n=0;n<rangeSpan;n++)
+    	{
+    		for(int m=0;m<rangeSpan;m++)
+    		{
+    			
+    			Color c = betaColorNTC;
+    			//interessting thing that modulo
+    			if(((n+m)%2)==0)c = alphaColorNTC;
+    			neighbourTC.setColorOnTile(n, m, c);
+    		}
+    	}
+    	
+		neighbourTC.drawHorizontalLine(20);
     }
 
     private void fetchAndDisplayData(Stage stage)
@@ -169,7 +218,7 @@ public class DCTMain extends Application
         rangeEnd = (int) sliderH.getValue();
         probability = Float.parseFloat(ratioTxtField.getText());
         
-        String inputState = DCTMain.inputIsOK(colorCount, rangeBegin, rangeEnd, probability);
+        String inputState = inputIsOK(colorCount, rangeBegin, rangeEnd, probability);
         
         if(inputState.equals(noError))
         {
@@ -192,13 +241,13 @@ public class DCTMain extends Application
         stage.setTitle(title);
     }
         
-    private static String inputIsOK(int colorCount, int rangeBegin, int rangeEnd, float ratio)
+    private String inputIsOK(int colorCount, int rangeBegin, int rangeEnd, float ratio)
     {
-    	if(colorCount>256||colorCount<2)return colorCountError;
-    	if(Math.abs(rangeBegin)>6)return rangeBeginError;
-    	if(Math.abs(rangeEnd)>6)return rangeEndError;
+    	if(colorCount>colorCountMax||colorCount<colorCountMin)return colorCountError;
+    	if(Math.abs(rangeBegin)>rangeMax)return rangeBeginError;
+    	if(Math.abs(rangeEnd)>rangeMax)return rangeEndError;
     	if(rangeBegin==rangeEnd)return rangeBeginEqualToRangeEndError;
-    	if(-rangeBegin+rangeEnd>10)return rangeSpanTooBigError;
+    	if(-rangeBegin+rangeEnd>(rangeSpan-1))return rangeSpanTooBigError;
     	
     	if(ratio<=0||ratio>1)return ratioOutOfBounds;
     	

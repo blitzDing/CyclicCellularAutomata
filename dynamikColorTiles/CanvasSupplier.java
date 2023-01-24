@@ -10,15 +10,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+
 import javafx.stage.Stage;
+
+
 import someMath.CollectionManipulation;
+
 import someMath.DirectedWeightedGraph;
 
-public class NewAnimation
+
+
+public class CanvasSupplier
 {
 
 	Stage stage;
@@ -43,7 +48,7 @@ public class NewAnimation
 	private int [][] tileArray;
     private TileCanvas tileCanvas;
 
-    public NewAnimation(Stage stage, HBox root, int tileNrHorizontal, int tileNrVertical)
+    public CanvasSupplier(Stage stage, HBox root, int tileNrHorizontal, int tileNrVertical)
     {
 
     	this.stage = stage;    
@@ -109,6 +114,10 @@ public class NewAnimation
     	}    
     }
     
+    public void resetCycleNr()
+    {
+    	cycleNr = 0;
+    }
     
     public void computeTileData()
     {
@@ -116,7 +125,7 @@ public class NewAnimation
 
 		try 
 		{
-			Thread.sleep(500);
+			Thread.sleep(250);
 		}
 		catch (InterruptedException e)
 		{
