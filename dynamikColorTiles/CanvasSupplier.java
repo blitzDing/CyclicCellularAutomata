@@ -1,20 +1,21 @@
 package dynamikColorTiles;
 
+
+
+
 import java.awt.Point;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+
 
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
-
-import javafx.stage.Stage;
 
 
 import someMath.CollectionManipulation;
@@ -25,11 +26,7 @@ import someMath.DirectedWeightedGraph;
 
 public class CanvasSupplier
 {
-
-	Stage stage;
         
-	int rangeBegin;
-	int rangeEnd;
 	float probability;
                 
 	final HBox root;
@@ -43,21 +40,20 @@ public class CanvasSupplier
 	private ColorSpace colorSpace;
 	private int colorCount;
 	private DirectedWeightedGraph<Color> dg;
-	private Set<Integer> cordParts;
+	private boolean [][] nStates;
 	private Set<List<Integer>> neighboursDiff;
 	private int [][] tileArray;
     private TileCanvas tileCanvas;
 
-    public CanvasSupplier(Stage stage, HBox root, int tileNrHorizontal, int tileNrVertical)
+    public CanvasSupplier(HBox root, int tileNrHorizontal, int tileNrVertical)
     {
 
-    	this.stage = stage;    
     	this.root = root;
       	
       	this.tileCanvas = new TileCanvas(tileWidth, tileHeight, tileNrHorizontal, tileNrVertical);
     }
 
-    public void setConfigData(int colorCount, int tileNrHorizontal, int tileNrVertical, int rangeBegin, int rangeEnd
+    public void setConfigData(int colorCount, int tileNrHorizontal, int tileNrVertical, boolean[][] nStates
     		, float probability)
     {
     	
@@ -68,23 +64,38 @@ public class CanvasSupplier
       	this.tileNrVertical = tileNrVertical;
       	this.tileArray = new int[tileNrHorizontal][tileNrVertical];
       	
-
-      	this.rangeBegin = rangeBegin;
-      	this.rangeEnd = rangeEnd;
+      	this.nStates = nStates;
+      	
       	this.probability = probability;	
     }
     
-    public void setRange()
+    public void setupNeighbourDelta()
     {
-      	cordParts = new HashSet<>(
-      			IntStream.rangeClosed(rangeBegin, rangeEnd).boxed().collect(Collectors.toList()));
-      	
-      	List<Set<Integer>> intSetList = new ArrayList<>();
-      	intSetList.add(cordParts);
-      	intSetList.add(cordParts);
-      	neighboursDiff = CollectionManipulation.cartesianProduct(intSetList);
-
-    }
+    	
+    	neighboursDiff = new HashSet<List<Integer>>();
+    	
+    	int xSpan = nStates.length;
+    	int ySpan = nStates[0].length;
+    	
+    	for(int x=0;x<xSpan;x++)
+    	{
+    		for(int y=0;y<ySpan;y++)
+    		{
+    			int xx = x-(xSpan-1)/2;
+    			int yy = y-(ySpan-1)/2;
+    			
+    			if(nStates[x][y])
+    			{
+    				List<Integer> list = new ArrayList<>();
+    				list.add(xx);
+    				list.add(yy);
+    			
+    				neighboursDiff.add(list);
+    			}
+    		}
+    	}
+    } 
+   //neighboursDiff = CollectionManipulation.cartesianProduct(intSetList);
     
     public void setColorGraph()
     {
@@ -206,6 +217,10 @@ public class CanvasSupplier
 
     	return susceptibles;
     }
+    
+    public int getTileWidth() {return tileWidth;}
+    
+    public int getTileHeight() {return tileHeight;}
 
     public Set<Point> neighbourCoords(int x, int y)    
     {

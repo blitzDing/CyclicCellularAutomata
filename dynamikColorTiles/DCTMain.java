@@ -4,16 +4,13 @@ package dynamikColorTiles;
 import javafx.application.*;
 
 import javafx.event.*;
+
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
-
 import javafx.scene.layout.*;
-
 import javafx.scene.paint.Color;
-
 
 import javafx.stage.Stage;
 
@@ -26,7 +23,6 @@ public class DCTMain extends Application
     private int tileNrVertical = 150;
 
     private final int rangeMax = 5;
-    //private final int rangeMin = -rangeMax;
     private final int rangeSpan = 2*rangeMax+1;
     
     private final int colorCountMax = 256;
@@ -41,10 +37,7 @@ public class DCTMain extends Application
 
     Label rangeBeginLbl = new Label("Range begin");
     Label rangeEndLbl = new Label("Range end");
-    
-    Slider sliderV = new Slider(-5, 5, -1);   
-    Slider sliderH = new Slider(-5, 5, 1);
-    
+        
     Label colorCountLbl = new Label("Nr. of Colors");
     TextField ccTxtField = new TextField(String.valueOf(colorCount));
 
@@ -59,11 +52,10 @@ public class DCTMain extends Application
     Color alphaColorNTC = Color.YELLOW;
     Color betaColorNTC = Color.BLUE;
     
-    boolean [][] ntcState = new boolean[rangeSpan][rangeSpan];
+    boolean [][] ntcStates = new boolean[rangeSpan][rangeSpan];
     
     HBox ratioHBox = new HBox();
     VBox adjustmentVBox = new VBox();
-    HBox rangeHBox = new HBox();
 
     private static int aniInstCount = 0;
 
@@ -75,9 +67,8 @@ public class DCTMain extends Application
 	{
 	
 	
-		cs.setConfigData(colorCount, tileNrHorizontal, tileNrVertical, rangeBegin, rangeEnd, 
-	        		probability);
-		cs.setRange();	
+		cs.setConfigData(colorCount, tileNrHorizontal, tileNrVertical, ntcStates, probability);
+		cs.setupNeighbourDelta();	
 		cs.setColorGraph();
 		cs.initTileData();
 		cs.resetCycleNr();
@@ -109,23 +100,7 @@ public class DCTMain extends Application
     @Override
     public void start(Stage primaryStage)
     {
-    	
-    	sliderV.setShowTickMarks(true);
-    	sliderV.setShowTickLabels(true);
-    	sliderV.setMajorTickUnit(1);
-    	sliderV.setBlockIncrement(1);
-    	sliderV.setSnapToTicks(true);
-    	sliderV.valueProperty().addListener((obs, oldval, newVal) -> 
-        sliderV.setValue(newVal.intValue()));
-    	
-    	sliderH.setShowTickMarks(true);
-    	sliderH.setShowTickLabels(true);
-    	sliderH.setMajorTickUnit(1);
-    	sliderH.setBlockIncrement(1);
-    	sliderH.setSnapToTicks(true);
-    	sliderH.valueProperty().addListener((obs, oldval, newVal) -> 
-        sliderH.setValue(newVal.intValue()));
-        	
+    	        	
         Scene scene = new Scene(root,1100,600);
         primaryStage = new Stage();
         Button startBtn = new Button("Start");
@@ -158,17 +133,30 @@ public class DCTMain extends Application
         };
         startBtn.setOnAction(eventH0);
 
-        rangeHBox.getChildren().addAll(rangeBeginLbl, sliderV, rangeEndLbl, sliderH);
+        neighbourTC.getCanvas().setOnMouseClicked(event -> 
+        {
+        	
+
+            int x = ((int)(event.getX()))/(ntcTileWidth);
+            int y = ((int)(event.getY()))/(ntcTileHeight);
+
+            System.out.println("(x, y) = ("+x +", "+y+")");
+            ntcStates[x][y] = !ntcStates[x][y];
+            if(ntcStates[x][y])neighbourTC.setColorOnTile(x, y, alphaColorNTC);
+            else neighbourTC.setColorOnTile(x, y, betaColorNTC);
+            gridLines();
+        });    	
 
         ccBox.getChildren().addAll(colorCountLbl, ccTxtField);
 
         ratioHBox.getChildren().addAll(ratioLbl, ratioTxtField);
 
         
-        adjustmentVBox.getChildren().addAll(rangeHBox, ccBox, ratioHBox, startBtn, neighbourTC.getCanvas());
-        setupGrid();
+        adjustmentVBox.getChildren().addAll(ccBox, ratioHBox, startBtn, neighbourTC.getCanvas());
+        setupStates(ntcStates);
+        setupGrid(ntcStates);
         
-       	cs = new CanvasSupplier(finalPrimaryStage, root, tileNrHorizontal, tileNrVertical);
+       	cs = new CanvasSupplier(root, tileNrHorizontal, tileNrVertical);
 
        	root.getChildren().addAll(adjustmentVBox, cs.getCanvas());
 
@@ -176,36 +164,45 @@ public class DCTMain extends Application
         primaryStage.show();
     }
     
-    private void setupGrid()
+    private void setupStates(boolean[][]states)
     {
-    	//TODO: Include ntcState.
-        neighbourTC.getCanvas().setOnMouseClicked(event -> 
-        {
-        	
-
-            int x = ((int)(event.getX()))/(ntcTileWidth);
-            int y = ((int)(event.getY()))/(ntcTileHeight);
-            //TODO: check current Color. Canvas currentCol = neighbourTC.getCanvas();
-            System.out.println("(x, y) = ("+x +", "+y+")");
-            neighbourTC.setColorOnTile(x, y, Color.RED);
-        });    	
-
     	// Fills Canvas complete and over paints everything.	
 		for(int n=0;n<rangeSpan;n++)
     	{
     		for(int m=0;m<rangeSpan;m++)
     		{
-    			
+    			int x = n-(rangeSpan-1)/2;
+    			int y = m-(rangeSpan-1)/2;
+		
+    			states[n][m]=false;
+    			if(x*x<=1&&y*y<=1)states[n][m]= true;
+    			if(x==0&&y==0)states[n][m]=false;//middle.
+    		}
+    	}
+    }
+    private void setupGrid(boolean[][]states)
+    {
+    	// Fills Canvas complete and over paints everything.	
+		for(int n=0;n<rangeSpan;n++)
+    	{
+    		for(int m=0;m<rangeSpan;m++)
+    		{
+    			    			
     			Color c = betaColorNTC;
-    			//interessting thing that modulo
-    			if(((n+m)%2)==0)c = alphaColorNTC;
+    			if(states[n][m])c = alphaColorNTC;
     			neighbourTC.setColorOnTile(n, m, c);
     		}
     	}
-    	
-		neighbourTC.drawHorizontalLine(20);
+		gridLines();
     }
-
+    
+    private void gridLines()
+    {
+    	
+		for(int n=0;n<=(rangeSpan+1)*ntcTileWidth;n+=ntcTileWidth)neighbourTC.drawVerticalLine(n);
+		for(int n=0;n<=(rangeSpan+1)*ntcTileHeight;n+=ntcTileHeight)neighbourTC.drawHorizontalLine(n);
+    }
+    
     private void fetchAndDisplayData(Stage stage)
     {
     	    	
@@ -214,11 +211,9 @@ public class DCTMain extends Application
 		aniInstCount++;
     	
     	colorCount = Integer.parseInt(ccTxtField.getText());
-        rangeBegin = (int) sliderV.getValue();
-        rangeEnd = (int) sliderH.getValue();
         probability = Float.parseFloat(ratioTxtField.getText());
         
-        String inputState = inputIsOK(colorCount, rangeBegin, rangeEnd, probability);
+        String inputState = inputIsOK(colorCount, probability);
         
         if(inputState.equals(noError))
         {
@@ -226,10 +221,6 @@ public class DCTMain extends Application
            	setTitle(stage, "Colors: " + colorCount
                    	+ " Probability: "
                    	+ probability
-                   	+ " Range: ("
-                   	+ rangeBegin
-                   	+ ", "
-                  	+ rangeEnd+")"
            			+ "H: " + tileNrHorizontal
            			+ "W: " + tileNrVertical);
        		        }
@@ -241,7 +232,7 @@ public class DCTMain extends Application
         stage.setTitle(title);
     }
         
-    private String inputIsOK(int colorCount, int rangeBegin, int rangeEnd, float ratio)
+    private String inputIsOK(int colorCount, float ratio)
     {
     	if(colorCount>colorCountMax||colorCount<colorCountMin)return colorCountError;
     	if(Math.abs(rangeBegin)>rangeMax)return rangeBeginError;
