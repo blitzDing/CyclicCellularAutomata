@@ -4,23 +4,18 @@ package dynamikColorTiles;
 
 
 import java.awt.Point;
-
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-
+import someMath.CollectionManipulation;
+import someMath.DirectedWeightedGraph;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
-
-
-import someMath.CollectionManipulation;
-
-import someMath.DirectedWeightedGraph;
+import javafx.util.Pair;
 
 
 
@@ -103,10 +98,10 @@ public class CanvasSupplier
       	//Circle graph for now
       	Set<Color> colorSet = new HashSet<>();
       	colorSet.addAll(colorSpace.getColorList());
-      	this.dg = new DirectedWeightedGraph<Color>(colorSet);
+      	this.dg = new DirectedWeightedGraph();
       	Color lastColor = colorSpace.getColorByNr(colorCount-1);
       	Color firstColor = colorSpace.getColorByNr(0);
-      	dg.connect(lastColor,firstColor,stndrtWeight);
+      	dg.connect(lastColor,firstColor, probability);
       	for(int n=0;n<colorCount-1;n++)
       	{
 
@@ -133,7 +128,6 @@ public class CanvasSupplier
     public void computeTileData()
     {
     
-
 		try 
 		{
 			Thread.sleep(250);
@@ -155,17 +149,22 @@ public class CanvasSupplier
      
     		   int idNrSrc = tileArray[x][y];
     		   Color srcCol = colorSpace.getColorByNr(idNrSrc);
-   			   //In a Circle every Color has only one Destiny.
-   			   //So the next line makes sense. (catchRandom)                        
-   			   Color desCol = CollectionManipulation.catchRandomElementOfSet(dg.getDestinysOf(srcCol));     
-   			   int idNrDes = colorSpace.getNrOfColor(desCol);     
-   			   Set<Point> susceptible = findSusceptiblesCoords(idNrDes, x, y, tileArray, removedTilesCoords); 
+   			   /*TODO:
+   			    * In a Circle every Color has only one Destiny.
+   			    * So the next line makes sense. (catchRandom)
+   			    * I need to adjust if it ever want to have the possibility of many destinies.
+    		    */
+    		   
+    		   Set<Pair<Double, Color>> set = dg.getDestiniesOf(srcCol);
+   			   Pair<Double,Color> desCol = CollectionManipulation.catchRandomElementOfSet(set); 
+   			   int idNrDes = colorSpace.getNrOfColor(desCol.getValue());     
+   			   Set<Point> susceptibles = findSusceptiblesCoords(idNrDes, x, y, tileArray, removedTilesCoords); 
     		   //System.out.println(susceptible.size()+" Susceptibles at Position: "+x+","+y);
-               changeColNrOfSusceptible(susceptible, idNrSrc, copy);
+               changeColNrOfSusceptible(susceptibles, idNrSrc, copy);
     	   }    
    	   }
 
-    	   //if(Arrays.deepEquals(copy,tileArray))fin();
+    	//if(Arrays.deepEquals(copy,tileArray))fin();
        tileArray = Arrays.stream(copy).map(int[]::clone).toArray(int[][]::new); 	
     }
 
@@ -190,6 +189,14 @@ public class CanvasSupplier
     void changeColNrOfSusceptible(Set<Point> susceptibles, int idNr, int[][] tileArray)
     {
 
+    	Color c = colorSpace.getColorByNr(idNr);
+    	Set<Pair<Double, Color>> destinysOfC = dg.getDestiniesOf(c);
+    	Pair<Double, Color> oneDestiny = CollectionManipulation.catchRandomElementOfSet(destinysOfC);
+    	double probability = oneDestiny.getKey();
+    	/* TODO:
+    	 * The above must be adjusted if there gone be many Destinies.
+    	 * Also other lines of Code might be not working well then.
+    	*/
     	int b = (int)(1000*probability);
 
     	for(Point p: susceptibles)
