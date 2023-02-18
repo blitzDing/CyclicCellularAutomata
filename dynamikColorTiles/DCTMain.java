@@ -19,8 +19,8 @@ import javafx.stage.Stage;
 public class DCTMain extends Application
 {
 
-    private int tileNrHorizontal = 200;
-    private int tileNrVertical = 150;
+    private int tileNrHorizontal = 50;
+    private int tileNrVertical = 50;
 
     private final int rangeMax = 5;
     private final int rangeSpan = 2*rangeMax+1;
@@ -59,7 +59,7 @@ public class DCTMain extends Application
 
     private static int aniInstCount = 0;
 
-    private CanvasSupplier cs;
+    private CanvasManipulator cs;
     
     private boolean halt = false;
     
@@ -75,10 +75,20 @@ public class DCTMain extends Application
 		
 		while(!halt)
 		{
-				
-			Platform.runLater(() ->	cs.drawArray());
 			
-			cs.computeTileData();
+			Runnable onlyDraw = ()-> cs.drawArray();
+			Thread dd = new Thread(onlyDraw);
+			
+			Platform.runLater(dd);
+
+			while(true)
+			{
+				if(!dd.isAlive())//Check if drawing is finished.
+				{
+					cs.computeTileData();
+					break;
+				}
+			}
 		}
 	};
 		
@@ -156,7 +166,7 @@ public class DCTMain extends Application
         setupStates(ntcStates);
         setupGrid(ntcStates);
         
-       	cs = new CanvasSupplier(root, tileNrHorizontal, tileNrVertical);
+       	cs = new CanvasManipulator(root, tileNrHorizontal, tileNrVertical);
 
        	root.getChildren().addAll(adjustmentVBox, cs.getCanvas());
 
@@ -247,6 +257,7 @@ public class DCTMain extends Application
 
     public void stop()
     {
+    	t.interrupt();
     	Platform.exit();
     }
 }

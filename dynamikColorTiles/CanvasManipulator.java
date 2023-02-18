@@ -6,12 +6,15 @@ package dynamikColorTiles;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import someMath.CollectionManipulation;
 import someMath.DirectedWeightedGraph;
+import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
@@ -19,9 +22,11 @@ import javafx.util.Pair;
 
 
 
-public class CanvasSupplier
+public class CanvasManipulator
 {
         
+	int tileChangeRate = 0;
+	
 	float probability;
                 
 	final HBox root;
@@ -36,11 +41,11 @@ public class CanvasSupplier
 	private int colorCount;
 	private DirectedWeightedGraph<Color> dg;
 	private boolean [][] nStates;
-	private Set<List<Integer>> neighboursDiff;
+	private Set<Point> neighboursDiff;
 	private int [][] tileArray;
     private TileCanvas tileCanvas;
 
-    public CanvasSupplier(HBox root, int tileNrHorizontal, int tileNrVertical)
+    public CanvasManipulator(HBox root, int tileNrHorizontal, int tileNrVertical)
     {
 
     	this.root = root;
@@ -55,10 +60,10 @@ public class CanvasSupplier
       	this.colorCount = colorCount;
       	this.colorSpace = new ColorSpace(colorCount, ColorSpace.ColorType.arbitrary);
 
-      	this.tileNrHorizontal = tileNrHorizontal; 
+      	this.tileNrHorizontal = tileNrHorizontal;
       	this.tileNrVertical = tileNrVertical;
       	this.tileArray = new int[tileNrHorizontal][tileNrVertical];
-      	
+
       	this.nStates = nStates;
       	
       	this.probability = probability;	
@@ -67,7 +72,7 @@ public class CanvasSupplier
     public void setupNeighbourDelta()
     {
     	
-    	neighboursDiff = new HashSet<List<Integer>>();
+    	neighboursDiff = new HashSet<Point>();
     	
     	int xSpan = nStates.length;
     	int ySpan = nStates[0].length;
@@ -81,11 +86,9 @@ public class CanvasSupplier
     			
     			if(nStates[x][y])
     			{
-    				List<Integer> list = new ArrayList<>();
-    				list.add(xx);
-    				list.add(yy);
+    				Point p = new Point(xx, yy);
     			
-    				neighboursDiff.add(list);
+    				neighboursDiff.add(p);
     			}
     		}
     	}
@@ -98,7 +101,7 @@ public class CanvasSupplier
       	//Circle graph for now
       	Set<Color> colorSet = new HashSet<>();
       	colorSet.addAll(colorSpace.getColorList());
-      	this.dg = new DirectedWeightedGraph();
+      	this.dg = new DirectedWeightedGraph<Color>();
       	Color lastColor = colorSpace.getColorByNr(colorCount-1);
       	Color firstColor = colorSpace.getColorByNr(0);
       	dg.connect(lastColor,firstColor, probability);
@@ -124,11 +127,11 @@ public class CanvasSupplier
     {
     	cycleNr = 0;
     }
-    
+
     public void computeTileData()
     {
-    
-		try 
+
+		try
 		{
 			Thread.sleep(250);
 		}
@@ -136,49 +139,34 @@ public class CanvasSupplier
 		{
 			e.printStackTrace();
 		}
-    		
+
     	int[][] copy = Arrays.stream(tileArray).map(int[]::clone).toArray(int[][]::new);
 
-    	Set<Point> removedTilesCoords = new HashSet<>();
    		cycleNr++;
-    	for (int x = 0; x < tileNrHorizontal; x++)
-    	{
-   
-    		for (int y = 0; y < tileNrVertical; y++)
-    		{
-     
-    		   int idNrSrc = tileArray[x][y];
-    		   Color srcCol = colorSpace.getColorByNr(idNrSrc);
-   			   /*TODO:
-   			    * In a Circle every Color has only one Destiny.
-   			    * So the next line makes sense. (catchRandom)
-   			    * I need to adjust if it ever want to have the possibility of many destinies.
-    		    */
-    		   
-    		   Set<Pair<Double, Color>> set = dg.getDestiniesOf(srcCol);
-   			   Pair<Double,Color> desCol = CollectionManipulation.catchRandomElementOfSet(set); 
-   			   int idNrDes = colorSpace.getNrOfColor(desCol.getValue());     
-   			   Set<Point> susceptibles = findSusceptiblesCoords(idNrDes, x, y, tileArray, removedTilesCoords); 
-    		   //System.out.println(susceptible.size()+" Susceptibles at Position: "+x+","+y);
-               changeColNrOfSusceptible(susceptibles, idNrSrc, copy);
-    	   }    
-   	   }
 
-    	//if(Arrays.deepEquals(copy,tileArray))fin();
-       tileArray = Arrays.stream(copy).map(int[]::clone).toArray(int[][]::new); 	
+   		for (int x = 0; x < tileNrHorizontal; x++)
+    	{
+   			for (int y = 0; y < tileNrVertical; y++)
+    		{
+               changeColNrOfPoint(x,y, copy);
+    		}
+    	}
+   		
+   		System.out.println("Change Rate: " + tileChangeRate);
+   		tileChangeRate = 0;
+   		tileArray = Arrays.stream(copy).map(int[]::clone).toArray(int[][]::new);
     }
 
-        
     public void drawArray()
     {
 
     	//System.out.println("Thread is on the javaFX Application Thread: "+Platform.isFxApplicationThread());
-    	System.out.println("Drawing Cycles Nr.: "+cycleNr);
+    	//System.out.println("Drawing Cycles Nr.: "+cycleNr);
     	for(int x=0;x<tileNrHorizontal;x++)
     	{
     		for(int y=0;y<tileNrVertical;y++)            
     		{                    
-    			
+
     			int idNr = tileArray[x][y];
     			Color c = colorSpace.getColorByNr(idNr);
     			tileCanvas.setColorOnTile(x,y, c);
@@ -186,69 +174,92 @@ public class CanvasSupplier
     	}
     }
 
-    void changeColNrOfSusceptible(Set<Point> susceptibles, int idNr, int[][] tileArray)
+    //Complicated Heart of the Algorithm.
+    private void changeColNrOfPoint(int x, int y, int[][] tileArray)
     {
-
-    	Color c = colorSpace.getColorByNr(idNr);
-    	Set<Pair<Double, Color>> destinysOfC = dg.getDestiniesOf(c);
-    	Pair<Double, Color> oneDestiny = CollectionManipulation.catchRandomElementOfSet(destinysOfC);
-    	double probability = oneDestiny.getKey();
-    	/* TODO:
-    	 * The above must be adjusted if there gone be many Destinies.
-    	 * Also other lines of Code might be not working well then.
-    	*/
-    	int b = (int)(1000*probability);
-
-    	for(Point p: susceptibles)
-        {
-    		int z = (int)(Math.random()*1000);
-    		if(z<b)tileArray[p.x][p.y]=idNr;
-        }
-    }
-
-    public Set<Point> findSusceptiblesCoords(int searchIDNr, int x, int y, int[][] tileArray, Set<Point> removedTilesCoords)
-    {
-
-    	Set<Point> susceptibles = new HashSet<>();
-
-    	for(Point p: neighbourCoords(x,y))
+    	
+    	//Map<Color, Double> sumOfPointersOfColor = new HashMap<>();
+    	
+    	int colorNrOfCenter = tileArray[x][y];
+    	Color colorOfCenter = colorSpace.getColorByNr(colorNrOfCenter);
+    	Set<Color> destiny = dg.whoPointsToThisVertex(colorOfCenter);
+    	
+    	for(Point neighbour: neighbourPoints(x,y))
     	{
-
-    		int idNr = tileArray[p.x][p.y];
-    		if(idNr==searchIDNr&&!removedTilesCoords.contains(p))
+    		    		
+    		int colorNrOfNeighbour = tileArray[neighbour.x][neighbour.y];
+    		Color colorOfNeighbour = colorSpace.getColorByNr(colorNrOfNeighbour);
+    		boolean isDestiny = destiny.contains(colorOfNeighbour);
+    	
+    		if(isDestiny)
     		{
-    			susceptibles.add(p);             
-    			removedTilesCoords.add(p);
+    			
+    			tileChangeRate++;
+    			tileArray[x][y] = colorNrOfNeighbour;
+    			break;
     		}
     	}
+    			
+    		
+    	/*
+    	{    		
+   			double weight = dg.getWeightOfConnection(colorOfNeighbour, colorOfCenter);
+    			
+    		if(sumOfPointersOfColor.containsKey(colorOfNeighbour))
+    		{
+    			double newSumWeight = sumOfPointersOfColor.get(colorOfNeighbour)+weight;
+    			sumOfPointersOfColor.remove(colorOfNeighbour);
+   				sumOfPointersOfColor.put(colorOfNeighbour, newSumWeight);
+   			}
+   			else sumOfPointersOfColor.put(colorOfNeighbour, weight);
+   		}
 
-    	return susceptibles;
+    	
+    	if(sumOfPointersOfColor.isEmpty())return;
+
+    	List<Pair<Color, Double>> layers = new ArrayList<>();
+
+    	for(Color color: sumOfPointersOfColor.keySet())
+    	{
+    		
+    		double sumWeight = sumOfPointersOfColor.get(color);
+    		layers.add(new Pair<Color, Double>(color, sumWeight));
+    	}
+
+    	List<Double> stripedLayers = CollectionManipulation.getRidOfTheGeneric(layers);
+    	double z = CollectionManipulation.randomNrBoundBetween(stripedLayers);
+    	
+    	int n = CollectionManipulation.betweenWhichElements(z, layers);
+    	int k = colorSpace.getNrOfColor(layers.get(n).getKey());
+    	tileArray[x][y] = k;
+    	*/
     }
-    
+
     public int getTileWidth() {return tileWidth;}
-    
+
     public int getTileHeight() {return tileHeight;}
 
-    public Set<Point> neighbourCoords(int x, int y)    
+    public Set<Point> neighbourPoints(int x, int y)
     {
 
     	Set<Point> points = new HashSet<>();
-            
-    	for(List<Integer> l: neighboursDiff)
+
+    	for(Point p: neighboursDiff)
     	{
 
-    		int xNeighbour = l.get(0) + x;
-    		int yNeighbour = l.get(1) + y;
+    		int xNeighbour = p.x + x;
+    		int yNeighbour = p.y + y;
 
     		//Torus
-    		xNeighbour=Math.floorMod(xNeighbour,tileNrHorizontal);
-    		yNeighbour=Math.floorMod(yNeighbour, tileNrVertical);
+    		xNeighbour = Math.floorMod(xNeighbour, tileNrHorizontal);
+    		yNeighbour = Math.floorMod(yNeighbour, tileNrVertical);
 
-
-    		Point p = new Point(xNeighbour,yNeighbour);
-    		points.add(p);
+    		Point neighbour = new Point(xNeighbour,yNeighbour);
+    		points.add(neighbour);
     	}
 
+    	if(points.size()>neighboursDiff.size())Platform.exit();
+    	
     	return points;
     }
     
