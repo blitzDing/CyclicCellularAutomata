@@ -5,10 +5,10 @@ package dynamikColorTiles;
 
 import java.awt.Point;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 import someMath.CollectionManipulation;
 import someMath.DirectedWeightedGraph;
@@ -98,7 +98,7 @@ public class CanvasSupplier
       	//Circle graph for now
       	Set<Color> colorSet = new HashSet<>();
       	colorSet.addAll(colorSpace.getColorList());
-      	this.dg = new DirectedWeightedGraph();
+      	this.dg = new DirectedWeightedGraph<Color>();
       	Color lastColor = colorSpace.getColorByNr(colorCount-1);
       	Color firstColor = colorSpace.getColorByNr(0);
       	dg.connect(lastColor,firstColor, probability);
@@ -114,10 +114,10 @@ public class CanvasSupplier
     
     public void initTileData()
     {
-    	for(int x = 0; x< tileNrHorizontal; x++)
-    	{
-    		for(int y = 0; y< tileNrVertical; y++)tileArray[x][y] = (int)(Math.random()*colorCount);
-    	}    
+ 
+    	
+    	BiConsumer<Integer, Integer> bic = (x,y)->tileArray[x][y] = (int)(Math.random()*colorCount);
+    	walkThruArray(bic);
     }
     
     public void resetCycleNr()
@@ -136,36 +136,38 @@ public class CanvasSupplier
 		{
 			e.printStackTrace();
 		}
-    		
-    	int[][] copy = Arrays.stream(tileArray).map(int[]::clone).toArray(int[][]::new);
+
+    	int[][] copy = new int[tileNrHorizontal][tileNrVertical];
+		BiConsumer<Integer, Integer> bic = (x,y)->copy[x][y]=tileArray[x][y];
+		walkThruArray(bic);
+		
 
     	Set<Point> removedTilesCoords = new HashSet<>();
    		cycleNr++;
-    	for (int x = 0; x < tileNrHorizontal; x++)
+   		
+    	bic = (x,y)->
     	{
-   
-    		for (int y = 0; y < tileNrVertical; y++)
-    		{
-     
-    		   int idNrSrc = tileArray[x][y];
-    		   Color srcCol = colorSpace.getColorByNr(idNrSrc);
-   			   /*TODO:
-   			    * In a Circle every Color has only one Destiny.
-   			    * So the next line makes sense. (catchRandom)
-   			    * I need to adjust if it ever want to have the possibility of many destinies.
-    		    */
-    		   
-    		   Set<Pair<Double, Color>> set = dg.getDestiniesOf(srcCol);
-   			   Pair<Double,Color> desCol = CollectionManipulation.catchRandomElementOfSet(set); 
-   			   int idNrDes = colorSpace.getNrOfColor(desCol.getValue());     
-   			   Set<Point> susceptibles = findSusceptiblesCoords(idNrDes, x, y, tileArray, removedTilesCoords); 
-    		   //System.out.println(susceptible.size()+" Susceptibles at Position: "+x+","+y);
-               changeColNrOfSusceptible(susceptibles, idNrSrc, copy);
-    	   }    
-   	   }
 
-    	//if(Arrays.deepEquals(copy,tileArray))fin();
-       tileArray = Arrays.stream(copy).map(int[]::clone).toArray(int[][]::new); 	
+    		int idNrSrc = tileArray[x][y];
+    		Color srcCol = colorSpace.getColorByNr(idNrSrc);
+
+    		/*TODO:
+   			 * In a Circle every Color has only one Destiny.
+   			 * So the next line makes sense. (catchRandom)
+   			 * I need to adjust if it ever want to have the possibility of many destinies.
+    		 */
+
+    		Set<Pair<Double, Color>> set = dg.getDestiniesOf(srcCol);
+    		Pair<Double,Color> desCol = CollectionManipulation.catchRandomElementOfSet(set);
+    		int idNrDes = colorSpace.getNrOfColor(desCol.getValue());
+    		Set<Point> susceptibles = findSusceptiblesCoords(idNrDes, x, y, tileArray, removedTilesCoords); 
+    		//System.out.println(susceptible.size()+" Susceptibles at Position: "+x+","+y);
+    		changeColNrOfSusceptible(susceptibles, idNrSrc, copy);
+    	};
+    	walkThruArray(bic);
+
+    	bic = (x,y)->{tileArray[x][y]=copy[x][y];};
+    	walkThruArray(bic);
     }
 
         
@@ -174,16 +176,15 @@ public class CanvasSupplier
 
     	//System.out.println("Thread is on the javaFX Application Thread: "+Platform.isFxApplicationThread());
     	System.out.println("Drawing Cycles Nr.: "+cycleNr);
-    	for(int x=0;x<tileNrHorizontal;x++)
-    	{
-    		for(int y=0;y<tileNrVertical;y++)            
-    		{                    
+    	
+    	BiConsumer<Integer, Integer> bic = (x,y)->
+    	{                    
     			
-    			int idNr = tileArray[x][y];
-    			Color c = colorSpace.getColorByNr(idNr);
-    			tileCanvas.setColorOnTile(x,y, c);
-    		}
-    	}
+    		int idNr = tileArray[x][y];
+   			Color c = colorSpace.getColorByNr(idNr);
+   			tileCanvas.setColorOnTile(x,y, c);	
+    	};
+    	walkThruArray(bic);
     }
 
     void changeColNrOfSusceptible(Set<Point> susceptibles, int idNr, int[][] tileArray)
@@ -250,6 +251,14 @@ public class CanvasSupplier
     	}
 
     	return points;
+    }
+
+    public void walkThruArray(BiConsumer<Integer, Integer> bic)
+    {
+    	for(int x = 0; x< tileNrHorizontal; x++)
+    	{
+    		for(int y = 0; y< tileNrVertical; y++)bic.accept(x, y);;
+    	}    
     }
     
     public Canvas getCanvas() {return tileCanvas.getCanvas();}
