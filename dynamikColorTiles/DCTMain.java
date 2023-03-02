@@ -51,6 +51,7 @@ public class DCTMain extends Application
     TileCanvas neighbourTC = new TileCanvas(ntcTileWidth, ntcTileHeight, rangeSpan, rangeSpan);
     Color alphaColorNTC = Color.YELLOW;
     Color betaColorNTC = Color.BLUE;
+    Color centerColorNTC = Color.RED;
     
     boolean [][] ntcStates = new boolean[rangeSpan][rangeSpan];
     
@@ -149,9 +150,14 @@ public class DCTMain extends Application
             int y = ((int)(event.getY()))/(ntcTileHeight);
 
             System.out.println("(x, y) = ("+x +", "+y+")");
-            ntcStates[x][y] = !ntcStates[x][y];
-            if(ntcStates[x][y])neighbourTC.setColorOnTile(x, y, alphaColorNTC);
-            else neighbourTC.setColorOnTile(x, y, betaColorNTC);
+            if(!(x==5&&y==5))
+            {
+
+            	ntcStates[x][y] = !ntcStates[x][y];
+
+            	if(ntcStates[x][y])neighbourTC.setColorOnTile(x, y, alphaColorNTC);
+            	else neighbourTC.setColorOnTile(x, y, betaColorNTC);
+            }
             gridLines();
         });    	
 
@@ -174,7 +180,7 @@ public class DCTMain extends Application
     
     private void setupStates(boolean[][]states)
     {
-    	// Fills Canvas complete and over paints everything.	
+    	
 		for(int n=0;n<rangeSpan;n++)
     	{
     		for(int m=0;m<rangeSpan;m++)
@@ -183,11 +189,12 @@ public class DCTMain extends Application
     			int y = m-(rangeSpan-1)/2;
 		
     			states[n][m]=false;
-    			if(x*x<=1&&y*y<=1)states[n][m]= true;
+    			if(x*x<=1&&y*y<=1)states[n][m]= true;//Ring.
     			if(x==0&&y==0)states[n][m]=false;//middle.
     		}
     	}
     }
+    
     private void setupGrid(boolean[][]states)
     {
     	// Fills Canvas complete and over paints everything.	
@@ -195,10 +202,12 @@ public class DCTMain extends Application
     	{
     		for(int m=0;m<rangeSpan;m++)
     		{
-    			    			
-    			Color c = betaColorNTC;
-    			if(states[n][m])c = alphaColorNTC;
-    			neighbourTC.setColorOnTile(n, m, c);
+    			    	
+    			boolean isCenter = (m==5)&&(n==5);
+    			if(states[n][m])neighbourTC.setColorOnTile(n, m, alphaColorNTC);
+    			else neighbourTC.setColorOnTile(n, m, betaColorNTC);
+    			
+    			if(isCenter)neighbourTC.setColorOnTile(n, m, centerColorNTC);
     		}
     	}
 		gridLines();
