@@ -76,9 +76,17 @@ public class DCTMain extends Application
 		while(!halt)
 		{
 				
-			Platform.runLater(() ->	cs.drawArray());
+			Thread dd = new Thread(()-> cs.drawArray());
 			
-			cs.computeTileData();
+			//Platform.runLater(dd) is on 
+			//the JavaFX Application Thread.
+			//It is executed in x Time. x < 17 ms.
+			Platform.runLater(dd);
+
+			while(dd.isAlive());//<-Semicolon.
+			
+   			cs.computeTileData();
+   			
 		}
 	};
 		
