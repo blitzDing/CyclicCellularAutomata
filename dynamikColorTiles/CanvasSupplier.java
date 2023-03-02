@@ -145,25 +145,7 @@ public class CanvasSupplier
     	Set<Point> removedTilesCoords = new HashSet<>();
    		cycleNr++;
    		
-    	bic = (x,y)->
-    	{
-
-    		int idNrSrc = tileArray[x][y];
-    		Color srcCol = colorSpace.getColorByNr(idNrSrc);
-
-    		/*TODO:
-   			 * In a Circle every Color has only one Destiny.
-   			 * So the next line makes sense. (catchRandom)
-   			 * I need to adjust if it ever want to have the possibility of many destinies.
-    		 */
-
-    		Set<Pair<Double, Color>> set = dg.getDestiniesOf(srcCol);
-    		Pair<Double,Color> desCol = CollectionManipulation.catchRandomElementOfSet(set);
-    		int idNrDes = colorSpace.getNrOfColor(desCol.getValue());
-    		Set<Point> susceptibles = findSusceptiblesCoords(idNrDes, x, y, tileArray, removedTilesCoords); 
-    		//System.out.println(susceptible.size()+" Susceptibles at Position: "+x+","+y);
-    		changeColNrOfSusceptible(susceptibles, idNrSrc, copy);
-    	};
+    	bic = (x,y)-> changeColNrOfTile(x,y,copy);
     	walkThruArray(bic);
 
     	bic = (x,y)->{tileArray[x][y]=copy[x][y];};
@@ -171,6 +153,37 @@ public class CanvasSupplier
     }
 
         
+    public void changeColNrOfTile(int x, int y, int[][] copy)
+    {
+    	
+    	Color colorCenter = colorSpace.getColorByNr(tileArray[x][y]);
+    	Set<Color> incomingConnections = dg.whoPointsToThisVertex(colorCenter);
+    	
+    	for(Point p: neighbourCoords(x,y))
+    	{	
+    		int colNrNeighbour = tileArray[p.x][p.y];
+    		Color colNeighbour = colorSpace.getColorByNr(colNrNeighbour);
+
+
+    		//Needs addjustment if i want more then one 'incomming' Vertexes.
+        	//Hmmm?
+    		if(incomingConnections.contains(colNeighbour))
+    		{
+    			
+    			double probability = dg.getWeightOfConnection(colNeighbour, colorCenter);
+    			
+            	int b = (int)(1000*probability);
+            	
+        		int z = (int)(Math.random()*1000);
+        		if(z<b)
+        		{
+        			copy[x][y]=colNrNeighbour;
+        			break;//<-important.
+        		}
+    		}
+    	}
+    }
+    
     public void drawArray()
     {
 
@@ -178,33 +191,12 @@ public class CanvasSupplier
     	System.out.println("Drawing Cycles Nr.: "+cycleNr);
     	
     	BiConsumer<Integer, Integer> bic = (x,y)->
-    	{                    
-    			
+    	{                        			
     		int idNr = tileArray[x][y];
    			Color c = colorSpace.getColorByNr(idNr);
    			tileCanvas.setColorOnTile(x,y, c);	
     	};
     	walkThruArray(bic);
-    }
-
-    void changeColNrOfSusceptible(Set<Point> susceptibles, int idNr, int[][] tileArray)
-    {
-
-    	Color c = colorSpace.getColorByNr(idNr);
-    	Set<Pair<Double, Color>> destinysOfC = dg.getDestiniesOf(c);
-    	Pair<Double, Color> oneDestiny = CollectionManipulation.catchRandomElementOfSet(destinysOfC);
-    	double probability = oneDestiny.getKey();
-    	/* TODO:
-    	 * The above must be adjusted if there gone be many Destinies.
-    	 * Also other lines of Code might be not working well then.
-    	*/
-    	int b = (int)(1000*probability);
-
-    	for(Point p: susceptibles)
-        {
-    		int z = (int)(Math.random()*1000);
-    		if(z<b)tileArray[p.x][p.y]=idNr;
-        }
     }
 
     public Set<Point> findSusceptiblesCoords(int searchIDNr, int x, int y, int[][] tileArray, Set<Point> removedTilesCoords)

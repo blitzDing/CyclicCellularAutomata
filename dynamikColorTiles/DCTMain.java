@@ -135,10 +135,9 @@ public class DCTMain extends Application
         		while(t.isAlive());//<-Semicolon.					
         	}
         	
+            fetchAndDisplayData(finalPrimaryStage);
         	t = new Thread(drawAndCompute);
         	t.start();
-
-            fetchAndDisplayData(finalPrimaryStage);
         };
         startBtn.setOnAction(eventH0);
 
