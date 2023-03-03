@@ -10,12 +10,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
-import someMath.CollectionManipulation;
 import someMath.DirectedWeightedGraph;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
-import javafx.util.Pair;
+
 
 
 
